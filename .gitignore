@@ -1,0 +1,7 @@
+.venv/
+dataset/
+__pycache__/
+docker-build.log
+DOCKER_OPTIMIZATION.md
+OPTIMIZATION_SUMMARY.md
+*.pyc
