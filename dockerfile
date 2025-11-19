@@ -59,8 +59,8 @@ ENV PORT=8080
 EXPOSE 8080
 
 # Health check (remove 8501)
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:8080/health')" || exit 1
+HEALTHCHECK CMD curl --fail http://localhost:8080/health || exit 1
+
 
 # Final CMD — FastAPI only (no Streamlit)
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8080"]
