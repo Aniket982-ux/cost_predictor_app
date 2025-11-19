@@ -94,5 +94,5 @@ jobs:
           --image=${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/ml-app/ml-api \
           --platform=managed \
           --region=${{ secrets.GCP_REGION }} \
-          --allow-unauthenticated
+          --allow-unauthenticated \
           --timeout=1000
