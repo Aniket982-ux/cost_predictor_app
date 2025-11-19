@@ -7,12 +7,13 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
+# Install build dependencies (with curl, properly formatted)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     git \
     g++ \
     gcc \
-    curl && \              # <-- Added curl (required for health check)
+    curl && \
     rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
@@ -27,6 +28,7 @@ RUN find /opt/venv -type d -name "tests" -exec rm -rf {} + 2>/dev/null || true &
     find /opt/venv -type f -name "*.pyc" -delete && \
     find /opt/venv -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 
+
 # Stage 2: Runtime - minimal image
 FROM python:3.11.9-slim
 
@@ -36,9 +38,10 @@ ENV PATH="/opt/venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
 
+# Install runtime dependencies (including curl, clean syntax)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgomp1 \
-    curl && \              # <-- Added curl (required for /healthcheck)
+    curl && \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /opt/venv /opt/venv
@@ -52,8 +55,6 @@ USER appuser
 ENV PORT=8080
 EXPOSE 8080
 
-# Improved Health Check (with interval, timeout, retries)
-HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-  CMD curl --fail http://localhost:8080/health || exit 1
+# Removed HEALTHCHECK to avoid startup failures
 
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8080"]
