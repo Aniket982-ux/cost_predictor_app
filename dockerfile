@@ -1,4 +1,4 @@
-# Stage 1: Builder - install dependencies and compile packages
+# Stage 1: Builder - install dependencies and download models
 FROM python:3.11.9-slim AS builder
 
 WORKDIR /build
@@ -8,7 +8,6 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     HF_HOME=/opt/venv/huggingface
 
-# Install build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     git \
@@ -26,8 +25,10 @@ RUN pip install --upgrade pip setuptools wheel && \
     pip install --no-cache-dir -r requirements.txt
 
 # -------------------------------
-# PRE-DOWNLOAD MACHINE LEARNING MODELS HERE
+# PRE-DOWNLOAD HUGGINGFACE MODELS
 # -------------------------------
+RUN mkdir -p /opt/venv/huggingface
+
 RUN python - <<EOF
 from transformers import AutoTokenizer, AutoModel, ViTImageProcessor, ViTModel
 
@@ -49,20 +50,25 @@ RUN find /opt/venv -type d -name "tests" -exec rm -rf {} + 2>/dev/null || true &
     find /opt/venv -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 
 
-# Stage 2: Runtime - minimal image
+
+# Stage 2: Runtime image
 FROM python:3.11.9-slim
 
 WORKDIR /app
 
+# SAFE: no inline comments in multiline ENV
 ENV PATH="/opt/venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    HF_HOME=/opt/venv/huggingface   # Make sure HF uses the cached models
+    HF_HOME=/opt/venv/huggingface
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgomp1 \
     curl && \
     rm -rf /var/lib/apt/lists/*
+
+# ensure the HF cache folder exists
+RUN mkdir -p /opt/venv/huggingface
 
 COPY --from=builder /opt/venv /opt/venv
 
@@ -75,5 +81,4 @@ USER appuser
 ENV PORT=8080
 EXPOSE 8080
 
-# Cloud Run will auto-check health by hitting root or /health
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8080"]
